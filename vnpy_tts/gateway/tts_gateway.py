@@ -524,7 +524,6 @@ class TtsTdApi(TdApi):
 
     def onRspQryInvestorPosition(self, data: dict, error: dict, reqid: int, last: bool) -> None:
         """持仓查询回报"""
-        print(data)
         if not data:
             return
 
