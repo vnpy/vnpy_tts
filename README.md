@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-    <img src ="https://img.shields.io/badge/version-6.5.1.3-blueviolet.svg"/>
+    <img src ="https://img.shields.io/badge/version-6.5.1.0-blueviolet.svg"/>
     <img src ="https://img.shields.io/badge/platform-windows|linux-yellow.svg"/>
     <img src ="https://img.shields.io/badge/python-3.7-blue.svg" />
     <img src ="https://img.shields.io/github/license/vnpy/vnpy.svg?color=orange"/>
@@ -13,7 +13,7 @@
 
 ## 说明
 
-基于CTP期货版的6.5.1接口封装开发的模拟交易TTS（Tick Trading System）接口【7x24】。
+基于TTS的6.5.1接口封装开发，对接类CTP的仿真交易环境。
 
 ## 安装
 
