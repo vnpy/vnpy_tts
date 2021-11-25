@@ -109,7 +109,9 @@ EXCHANGE_TTS2VT: Dict[str, Exchange] = {
     "SHFE": Exchange.SHFE,
     "CZCE": Exchange.CZCE,
     "DCE": Exchange.DCE,
-    "INE": Exchange.INE
+    "INE": Exchange.INE,
+    "SSE": Exchange.SSE,
+    "SZSE": Exchange.SZSE
 }
 
 # 产品类型映射
@@ -117,7 +119,10 @@ PRODUCT_TTS2VT: Dict[str, Product] = {
     THOST_FTDC_PC_Futures: Product.FUTURES,
     THOST_FTDC_PC_Options: Product.OPTION,
     THOST_FTDC_PC_SpotOption: Product.OPTION,
-    THOST_FTDC_PC_Combination: Product.SPREAD
+    THOST_FTDC_PC_Combination: Product.SPREAD,
+    'E': Product.EQUITY,
+    'B': Product.BOND,
+    'D': Product.FUND
 }
 
 # 期权类型映射
@@ -597,13 +602,12 @@ class TtsTdApi(TdApi):
 
     def onRspQryInstrument(self, data: dict, error: dict, reqid: int, last: bool) -> None:
         """合约查询回报"""
-        if data["ExchangeID"] == "NULL":
-            return
         product: Product = PRODUCT_TTS2VT.get(data["ProductClass"], None)
-        if product:
+        exchange: Exchange = EXCHANGE_TTS2VT.get(data["ExchangeID"], None)
+        if product and exchange:
             contract: ContractData = ContractData(
                 symbol=data["InstrumentID"],
-                exchange=EXCHANGE_TTS2VT[data["ExchangeID"]],
+                exchange=exchange,
                 name=data["InstrumentName"],
                 product=product,
                 size=data["VolumeMultiple"],
@@ -624,6 +628,11 @@ class TtsTdApi(TdApi):
                 contract.option_strike = data["StrikePrice"]
                 contract.option_index = str(data["StrikePrice"])
                 contract.option_expiry = datetime.strptime(data["ExpireDate"], "%Y%m%d")
+
+            elif contract.product == Product.EQUITY or contract.product == Product.FUND:
+                contract.min_volume = 100
+            elif contract.product == Product.BOND:
+                contract.min_volume = 10
 
             self.gateway.on_contract(contract)
 
