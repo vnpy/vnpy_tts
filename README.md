@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-    <img src ="https://img.shields.io/badge/version-6.5.1.0-blueviolet.svg"/>
+    <img src ="https://img.shields.io/badge/version-6.5.1.1-blueviolet.svg"/>
     <img src ="https://img.shields.io/badge/platform-windows|linux-yellow.svg"/>
     <img src ="https://img.shields.io/badge/python-3.7-blue.svg" />
     <img src ="https://img.shields.io/github/license/vnpy/vnpy.svg?color=orange"/>
@@ -15,9 +15,21 @@
 
 基于TTS的6.5.1接口封装开发，对接类CTP的仿真交易环境。
 
+目前TTS支持的仿真交易包括：
+
+- 期货
+    - 中金所
+    - 上期所
+    - 大商所
+    - 郑商所
+    - 能交所
+- 股票
+    - 上交所
+    - 深交所
+
 ## 安装
 
-安装需要基于2.2.0版本以上的[VN Studio](https://www.vnpy.com)。
+安装需要基于2.8.0版本以上的[VN Studio](https://www.vnpy.com)。
 
 直接使用pip命令：
 
