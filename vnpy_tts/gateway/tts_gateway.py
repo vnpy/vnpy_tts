@@ -144,6 +144,8 @@ class TtsGateway(BaseGateway):
     vn.py用于对接期货TTS柜台的交易接口。
     """
 
+    default_name: str = "TTS"
+
     default_setting: Dict[str, str] = {
         "用户名": "",
         "密码": "",
@@ -156,7 +158,7 @@ class TtsGateway(BaseGateway):
 
     exchanges: List[str] = list(EXCHANGE_TTS2VT.values())
 
-    def __init__(self, event_engine: EventEngine, gateway_name: str = "TTS") -> None:
+    def __init__(self, event_engine: EventEngine, gateway_name: str) -> None:
         """构造函数"""
         super().__init__(event_engine, gateway_name)
 
