@@ -111,8 +111,12 @@ EXCHANGE_TTS2VT: Dict[str, Exchange] = {
     "DCE": Exchange.DCE,
     "INE": Exchange.INE,
     "SSE": Exchange.SSE,
-    "SZSE": Exchange.SZSE
+    "SZSE": Exchange.SZSE,
+    "NASD": Exchange.NASDAQ,
+    "NYSE": Exchange.NYSE,
+    "HKEX": Exchange.SEHK,
 }
+EXCHANGE_VT2TTS: Dict[Exchange, str] = {v: k for k, v in EXCHANGE_TTS2VT.items()}
 
 # 产品类型映射
 PRODUCT_TTS2VT: Dict[str, Product] = {
@@ -144,6 +148,8 @@ class TtsGateway(BaseGateway):
     vn.py用于对接期货TTS柜台的交易接口。
     """
 
+    default_name: str = "TTS"
+
     default_setting: Dict[str, str] = {
         "用户名": "",
         "密码": "",
@@ -156,7 +162,7 @@ class TtsGateway(BaseGateway):
 
     exchanges: List[str] = list(EXCHANGE_TTS2VT.values())
 
-    def __init__(self, event_engine: EventEngine, gateway_name: str = "TTS") -> None:
+    def __init__(self, event_engine: EventEngine, gateway_name: str) -> None:
         """构造函数"""
         super().__init__(event_engine, gateway_name)
 
@@ -630,8 +636,9 @@ class TtsTdApi(TdApi):
                 contract.option_expiry = datetime.strptime(data["ExpireDate"], "%Y%m%d")
 
             elif contract.product == Product.EQUITY or contract.product == Product.FUND:
-                contract.min_volume = 100
-            elif contract.product == Product.BOND:
+                if exchange in [Exchange.SSE, Exchange.SZSE]:
+                    contract.min_volume = 100
+            elif contract.product == Product.BOND and exchange in [Exchange.SSE, Exchange.SZSE]:
                 contract.min_volume = 10
 
             self.gateway.on_contract(contract)
@@ -791,11 +798,16 @@ class TtsTdApi(TdApi):
             self.gateway.write_log(f"当前接口不支持该类型的委托{req.type.value}")
             return ""
 
+        exchange: Exchange = EXCHANGE_VT2TTS.get(req.exchange, None)
+        if not exchange:
+            self.gateway.write_log(f"不支持的交易所：{req.exchange}")
+            return ""
+
         self.order_ref += 1
 
         tts_req: dict = {
             "InstrumentID": req.symbol,
-            "ExchangeID": req.exchange.value,
+            "ExchangeID": exchange,
             "LimitPrice": req.price,
             "VolumeTotalOriginal": int(req.volume),
             "OrderPriceType": ORDERTYPE_VT2TTS.get(req.type, ""),
@@ -834,11 +846,16 @@ class TtsTdApi(TdApi):
 
     def cancel_order(self, req: CancelRequest) -> None:
         """委托撤单"""
+        exchange: Exchange = EXCHANGE_VT2TTS.get(req.exchange, None)
+        if not exchange:
+            self.gateway.write_log(f"不支持的交易所：{req.exchange}")
+            return
+
         frontid, sessionid, order_ref = req.orderid.split("_")
 
         tts_req: dict = {
             "InstrumentID": req.symbol,
-            "ExchangeID": req.exchange.value,
+            "ExchangeID": exchange,
             "OrderRef": order_ref,
             "FrontID": int(frontid),
             "SessionID": int(sessionid),
@@ -852,11 +869,16 @@ class TtsTdApi(TdApi):
 
     def send_rfq(self, req: OrderRequest) -> str:
         """询价请求"""
+        exchange: Exchange = EXCHANGE_VT2TTS.get(req.exchange, None)
+        if not exchange:
+            self.gateway.write_log(f"不支持的交易所：{req.exchange}")
+            return ""
+
         self.order_ref += 1
 
         tts_req: dict = {
             "InstrumentID": req.symbol,
-            "ExchangeID": req.exchange.value,
+            "ExchangeID": exchange,
             "ForQuoteRef": str(self.order_ref),
             "BrokerID": self.brokerid,
             "InvestorID": self.userid
