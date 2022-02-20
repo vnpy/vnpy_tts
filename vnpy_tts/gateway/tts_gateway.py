@@ -145,7 +145,7 @@ symbol_contract_map: Dict[str, ContractData] = {}
 
 class TtsGateway(BaseGateway):
     """
-    vn.py用于对接期货TTS柜台的交易接口。
+    VeighNa用于对接期货TTS柜台的交易接口。
     """
 
     default_name: str = "TTS"
