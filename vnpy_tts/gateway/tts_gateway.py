@@ -1,10 +1,10 @@
-from pathlib import Path
 import sys
 import pytz
 from datetime import datetime
 from time import sleep
 from vnpy.event.engine import EventEngine
-from typing import Dict, List, Set
+from typing import Dict, List
+from pathlib import Path
 
 from vnpy.trader.constant import (
     Direction,
@@ -231,7 +231,7 @@ class TtsGateway(BaseGateway):
         """输出错误信息日志"""
         error_id: int = error["ErrorID"]
         error_msg: str = error["ErrorMsg"]
-        msg = f"{msg}，代码：{error_id}，信息：{error_msg}"
+        msg: str = f"{msg}，代码：{error_id}，信息：{error_msg}"
         self.write_log(msg)
 
     def process_timer_event(self, event) -> None:
@@ -268,7 +268,7 @@ class TtsMdApi(MdApi):
 
         self.connect_status: bool = False
         self.login_status: bool = False
-        self.subscribed: Set = set()
+        self.subscribed: set = set()
 
         self.userid: str = ""
         self.password: str = ""
@@ -321,7 +321,7 @@ class TtsMdApi(MdApi):
 
         timestamp: str = f"{self.current_date} {data['UpdateTime']}.{int(data['UpdateMillisec']/100)}"
         dt: datetime = datetime.strptime(timestamp, "%Y%m%d %H:%M:%S.%f")
-        dt = CHINA_TZ.localize(dt)
+        dt: datetime = CHINA_TZ.localize(dt)
 
         tick: TickData = TickData(
             symbol=symbol,
@@ -402,7 +402,7 @@ class TtsMdApi(MdApi):
         # 过滤重复的订阅
         if symbol in self.subscribed:
             return
-            
+
         if self.login_status:
             self.subscribeMarketData(req.symbol)
         self.subscribed.add(req.symbol)
@@ -548,7 +548,7 @@ class TtsTdApi(TdApi):
             key: str = f"{data['InstrumentID'], data['PosiDirection']}"
             position: PositionData = self.positions.get(key, None)
             if not position:
-                position = PositionData(
+                position: PositionData = PositionData(
                     symbol=data["InstrumentID"],
                     exchange=contract.exchange,
                     direction=DIRECTION_TTS2VT[data["PosiDirection"]],
@@ -673,9 +673,9 @@ class TtsTdApi(TdApi):
 
         timestamp: str = f"{data['InsertDate']} {data['InsertTime']}"
         dt: datetime = datetime.strptime(timestamp, "%Y%m%d %H:%M:%S")
-        dt = CHINA_TZ.localize(dt)
+        dt: datetime = CHINA_TZ.localize(dt)
 
-        order = OrderData(
+        order: OrderData = OrderData(
             symbol=symbol,
             exchange=contract.exchange,
             orderid=orderid,
@@ -706,9 +706,9 @@ class TtsTdApi(TdApi):
 
         timestamp: str = f"{data['TradeDate']} {data['TradeTime']}"
         dt: datetime = datetime.strptime(timestamp, "%Y%m%d %H:%M:%S")
-        dt = CHINA_TZ.localize(dt)
+        dt: datetime = CHINA_TZ.localize(dt)
 
-        trade = TradeData(
+        trade: TradeData = TradeData(
             symbol=symbol,
             exchange=contract.exchange,
             orderid=orderid,
