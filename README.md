@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-    <img src ="https://img.shields.io/badge/version-6.5.1.4-blueviolet.svg"/>
+    <img src ="https://img.shields.io/badge/version-6.6.7.0-blueviolet.svg"/>
     <img src ="https://img.shields.io/badge/platform-windows|linux-yellow.svg"/>
     <img src ="https://img.shields.io/badge/python-3.7|3.8|3.9|3.10-blue.svg"/>
     <img src ="https://img.shields.io/github/license/vnpy/vnpy.svg?color=orange"/>
@@ -13,7 +13,7 @@
 
 ## 说明
 
-基于TTS的6.5.1接口封装开发，对接类CTP的仿真交易环境。
+基于TTS的6.6.7接口封装开发，对接类CTP的仿真交易环境。
 
 目前TTS支持的仿真交易包括：
 
