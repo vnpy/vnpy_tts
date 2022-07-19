@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-    <img src ="https://img.shields.io/badge/version-6.5.1.3-blueviolet.svg"/>
+    <img src ="https://img.shields.io/badge/version-6.6.7.0-blueviolet.svg"/>
     <img src ="https://img.shields.io/badge/platform-windows|linux-yellow.svg"/>
     <img src ="https://img.shields.io/badge/python-3.7|3.8|3.9|3.10-blue.svg"/>
     <img src ="https://img.shields.io/github/license/vnpy/vnpy.svg?color=orange"/>
@@ -13,7 +13,7 @@
 
 ## 说明
 
-基于TTS的6.5.1接口封装开发，对接类CTP的仿真交易环境。
+基于TTS的6.6.7接口封装开发，对接类CTP的仿真交易环境。
 
 目前TTS支持的仿真交易包括：
 
@@ -29,7 +29,7 @@
 
 ## 安装
 
-安装环境推荐基于3.0.0版本以上的【[**VeighNa Studio**](https://www.vnpy.com)】。
+安装环境推荐基于3.3.0版本以上的【[**VeighNa Studio**](https://www.vnpy.com)】。
 
 直接使用pip命令：
 
@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
 ## 连接
 
-模拟账号可通过https://github.com/krenx1983/tradenow 获取。
+模拟账号可通过https://github.com/krenx1983/openctp 获取。
 
 连接信息如下：
 
@@ -94,5 +94,8 @@ if __name__ == "__main__":
     "授权编码": ""
 }
 ```
+7x24小时环境：
+    交易服务器 - 122.51.136.165:20002
+    行情服务器 - 122.51.136.165:20004
 
 经纪商代码、产品名称、授权编码三项可以不填。
