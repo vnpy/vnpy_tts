@@ -108,6 +108,7 @@ EXCHANGE_TTS2VT: Dict[str, Exchange] = {
     "SHFE": Exchange.SHFE,
     "CZCE": Exchange.CZCE,
     "DCE": Exchange.DCE,
+    "GFEX": Exchange.GFEX,
     "INE": Exchange.INE,
     "SSE": Exchange.SSE,
     "SZSE": Exchange.SZSE,
