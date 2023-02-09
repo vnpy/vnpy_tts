@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-    <img src ="https://img.shields.io/badge/version-6.6.7.1-blueviolet.svg"/>
+    <img src ="https://img.shields.io/badge/version-6.6.7.2-blueviolet.svg"/>
     <img src ="https://img.shields.io/badge/platform-windows|linux-yellow.svg"/>
     <img src ="https://img.shields.io/badge/python-3.7|3.8|3.9|3.10-blue.svg"/>
     <img src ="https://img.shields.io/github/license/vnpy/vnpy.svg?color=orange"/>
@@ -22,6 +22,7 @@
     - 上期所
     - 大商所
     - 郑商所
+    - 广期所
     - 能交所
 - 股票
     - 上交所
@@ -29,7 +30,7 @@
 
 ## 安装
 
-安装环境推荐基于3.4.0版本以上的【[**VeighNa Studio**](https://www.vnpy.com)】。
+安装环境推荐基于3.6.0版本以上的【[**VeighNa Studio**](https://www.vnpy.com)】。
 
 直接使用pip命令：
 
@@ -95,7 +96,7 @@ if __name__ == "__main__":
 }
 ```
 7x24小时环境：
-    交易服务器 - 122.51.136.165:20002
-    行情服务器 - 122.51.136.165:20004
+    交易服务器 - 122.37.80.177:20002
+    行情服务器 - 122.37.80.177:20004
 
 经纪商代码、产品名称、授权编码三项可以不填。
