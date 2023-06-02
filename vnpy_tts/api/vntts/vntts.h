@@ -7,6 +7,10 @@
 #include <condition_variable>
 #include <locale>
 
+#ifdef __APPLE__
+#include <iconv.h>
+#endif
+
 #include "pybind11/pybind11.h"
 
 
@@ -118,6 +122,7 @@ void getString(const pybind11::dict &d, const char *key, string_literal<size> &v
     }
 };
 
+#ifndef __APPLE__
 //将GBK编码的字符串转换为UTF8
 inline string toUtf(const string &gb2312)
 {
@@ -144,3 +149,40 @@ inline string toUtf(const string &gb2312)
 
     return string();
 }
+
+#else
+iconv_t cd = iconv_open("UTF-8", "GB2312");
+
+int code_convert(char *inbuf, size_t inlen, char *outbuf, size_t outlen)
+{
+    char **pin = &inbuf;
+    char **pout = &outbuf;
+
+    memset(outbuf, 0, outlen);
+
+    if ((int)iconv(cd, pin, &inlen, pout, &outlen) == -1)
+    {
+        return -1;
+    }
+    *pout = "\0";
+
+    return 0;
+}
+
+inline string toUtf(const string &gb2312)
+{
+    int length = gb2312.size() * 2 + 1;
+    char temp[length];
+
+    int n = code_convert((char*)gb2312.c_str(), gb2312.size(), temp, length);
+
+    if(n == 0)
+    {
+        return temp;
+    }
+    else
+    {
+        return "";
+    }
+}
+#endif
