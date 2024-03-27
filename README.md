@@ -5,15 +5,15 @@
 </p>
 
 <p align="center">
-    <img src ="https://img.shields.io/badge/version-6.6.7.3-blueviolet.svg"/>
+    <img src ="https://img.shields.io/badge/version-6.7.2.0-blueviolet.svg"/>
     <img src ="https://img.shields.io/badge/platform-windows|linux-yellow.svg"/>
-    <img src ="https://img.shields.io/badge/python-3.7|3.8|3.9|3.10-blue.svg"/>
+    <img src ="https://img.shields.io/badge/python-3.10|3.11|3.12-blue.svg"/>
     <img src ="https://img.shields.io/github/license/vnpy/vnpy.svg?color=orange"/>
 </p>
 
 ## 说明
 
-基于TTS的6.6.7接口封装开发，对接类CTP的仿真交易环境。
+基于TTS的6.7.2接口封装开发，对接类CTP的仿真交易环境。
 
 目前TTS支持的仿真交易包括：
 
@@ -30,7 +30,7 @@
 
 ## 安装
 
-安装环境推荐基于3.6.0版本以上的【[**VeighNa Studio**](https://www.vnpy.com)】。
+安装环境推荐基于3.9.0版本以上的【[**VeighNa Studio**](https://www.vnpy.com)】。
 
 直接使用pip命令：
 
