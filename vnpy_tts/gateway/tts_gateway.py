@@ -2,7 +2,6 @@ import sys
 from datetime import datetime
 from time import sleep
 from vnpy.event.engine import EventEngine
-from typing import Dict, List
 from pathlib import Path
 
 from vnpy.trader.constant import (
@@ -67,7 +66,7 @@ from ..api import (
 
 
 # 委托状态映射
-STATUS_TTS2VT: Dict[str, Status] = {
+STATUS_TTS2VT: dict[str, Status] = {
     THOST_FTDC_OAS_Submitted: Status.SUBMITTING,
     THOST_FTDC_OAS_Accepted: Status.SUBMITTING,
     THOST_FTDC_OAS_Rejected: Status.REJECTED,
@@ -78,32 +77,32 @@ STATUS_TTS2VT: Dict[str, Status] = {
 }
 
 # 多空方向映射
-DIRECTION_VT2TTS: Dict[Direction, str] = {
+DIRECTION_VT2TTS: dict[Direction, str] = {
     Direction.LONG: THOST_FTDC_D_Buy,
     Direction.SHORT: THOST_FTDC_D_Sell
 }
-DIRECTION_TTS2VT: Dict[str, Direction] = {v: k for k, v in DIRECTION_VT2TTS.items()}
+DIRECTION_TTS2VT: dict[str, Direction] = {v: k for k, v in DIRECTION_VT2TTS.items()}
 DIRECTION_TTS2VT[THOST_FTDC_PD_Long] = Direction.LONG
 DIRECTION_TTS2VT[THOST_FTDC_PD_Short] = Direction.SHORT
 
 # 委托类型映射
-ORDERTYPE_VT2TTS: Dict[OrderType, str] = {
+ORDERTYPE_VT2TTS: dict[OrderType, str] = {
     OrderType.LIMIT: THOST_FTDC_OPT_LimitPrice,
     OrderType.MARKET: THOST_FTDC_OPT_AnyPrice
 }
-ORDERTYPE_TTS2VT: Dict[str, OrderType] = {v: k for k, v in ORDERTYPE_VT2TTS.items()}
+ORDERTYPE_TTS2VT: dict[str, OrderType] = {v: k for k, v in ORDERTYPE_VT2TTS.items()}
 
 # 开平方向映射
-OFFSET_VT2TTS: Dict[Offset, str] = {
+OFFSET_VT2TTS: dict[Offset, str] = {
     Offset.OPEN: THOST_FTDC_OF_Open,
     Offset.CLOSE: THOST_FTDC_OFEN_Close,
     Offset.CLOSETODAY: THOST_FTDC_OFEN_CloseToday,
     Offset.CLOSEYESTERDAY: THOST_FTDC_OFEN_CloseYesterday,
 }
-OFFSET_TTS2VT: Dict[str, Offset] = {v: k for k, v in OFFSET_VT2TTS.items()}
+OFFSET_TTS2VT: dict[str, Offset] = {v: k for k, v in OFFSET_VT2TTS.items()}
 
 # 交易所映射
-EXCHANGE_TTS2VT: Dict[str, Exchange] = {
+EXCHANGE_TTS2VT: dict[str, Exchange] = {
     "CFFEX": Exchange.CFFEX,
     "SHFE": Exchange.SHFE,
     "CZCE": Exchange.CZCE,
@@ -116,10 +115,10 @@ EXCHANGE_TTS2VT: Dict[str, Exchange] = {
     "NYSE": Exchange.NYSE,
     "HKEX": Exchange.SEHK,
 }
-EXCHANGE_VT2TTS: Dict[Exchange, str] = {v: k for k, v in EXCHANGE_TTS2VT.items()}
+EXCHANGE_VT2TTS: dict[Exchange, str] = {v: k for k, v in EXCHANGE_TTS2VT.items()}
 
 # 产品类型映射
-PRODUCT_TTS2VT: Dict[str, Product] = {
+PRODUCT_TTS2VT: dict[str, Product] = {
     THOST_FTDC_PC_Futures: Product.FUTURES,
     THOST_FTDC_PC_Options: Product.OPTION,
     THOST_FTDC_PC_SpotOption: Product.OPTION,
@@ -130,7 +129,7 @@ PRODUCT_TTS2VT: Dict[str, Product] = {
 }
 
 # 期权类型映射
-OPTIONTYPE_TTS2VT: Dict[str, OptionType] = {
+OPTIONTYPE_TTS2VT: dict[str, OptionType] = {
     THOST_FTDC_CP_CallOptions: OptionType.CALL,
     THOST_FTDC_CP_PutOptions: OptionType.PUT
 }
@@ -140,7 +139,7 @@ MAX_FLOAT = sys.float_info.max                  # 浮点数极限值
 CHINA_TZ = ZoneInfo("Asia/Shanghai")       # 中国时区
 
 # 合约数据全局缓存字典
-symbol_contract_map: Dict[str, ContractData] = {}
+symbol_contract_map: dict[str, ContractData] = {}
 
 
 class TtsGateway(BaseGateway):
@@ -150,7 +149,7 @@ class TtsGateway(BaseGateway):
 
     default_name: str = "TTS"
 
-    default_setting: Dict[str, str] = {
+    default_setting: dict[str, str] = {
         "用户名": "",
         "密码": "",
         "经纪商代码": "",
@@ -160,7 +159,7 @@ class TtsGateway(BaseGateway):
         "授权编码": ""
     }
 
-    exchanges: List[str] = list(EXCHANGE_TTS2VT.values())
+    exchanges: list[str] = list(EXCHANGE_TTS2VT.values())
 
     def __init__(self, event_engine: EventEngine, gateway_name: str) -> None:
         """构造函数"""
@@ -445,10 +444,10 @@ class TtsTdApi(TdApi):
         self.frontid: int = 0
         self.sessionid: int = 0
 
-        self.order_data: List[dict] = []
-        self.trade_data: List[dict] = []
-        self.positions: Dict[str, PositionData] = {}
-        self.sysid_orderid_map: Dict[str, str] = {}
+        self.order_data: list[dict] = []
+        self.trade_data: list[dict] = []
+        self.positions: dict[str, PositionData] = {}
+        self.sysid_orderid_map: dict[str, str] = {}
 
     def onFrontConnected(self) -> None:
         """服务器连接成功回报"""
