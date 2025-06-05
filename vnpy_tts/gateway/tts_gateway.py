@@ -165,8 +165,8 @@ class TtsGateway(BaseGateway):
         """构造函数"""
         super().__init__(event_engine, gateway_name)
 
-        self.td_api: "TtsTdApi" = TtsTdApi(self)
-        self.md_api: "TtsMdApi" = TtsMdApi(self)
+        self.td_api: TtsTdApi = TtsTdApi(self)
+        self.md_api: TtsMdApi = TtsMdApi(self)
 
     def connect(self, setting: dict) -> None:
         """连接交易接口"""
