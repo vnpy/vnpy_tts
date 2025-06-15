@@ -27,6 +27,7 @@ from vnpy.trader.object import (
 )
 from vnpy.trader.utility import get_folder_path, ZoneInfo
 from vnpy.trader.event import EVENT_TIMER
+from vnpy.event import Event
 
 from ..api import (
     MdApi,
@@ -165,8 +166,10 @@ class TtsGateway(BaseGateway):
         """构造函数"""
         super().__init__(event_engine, gateway_name)
 
-        self.td_api: "TtsTdApi" = TtsTdApi(self)
-        self.md_api: "TtsMdApi" = TtsMdApi(self)
+        self.td_api: TtsTdApi = TtsTdApi(self)
+        self.md_api: TtsMdApi = TtsMdApi(self)
+
+        self.count: int = 0
 
     def connect(self, setting: dict) -> None:
         """连接交易接口"""
@@ -206,7 +209,7 @@ class TtsGateway(BaseGateway):
             vt_orderid: str = self.td_api.send_rfq(req)
         # 其他委托
         else:
-            vt_orderid: str = self.td_api.send_order(req)
+            vt_orderid = self.td_api.send_order(req)
         return vt_orderid
 
     def cancel_order(self, req: CancelRequest) -> None:
@@ -230,10 +233,10 @@ class TtsGateway(BaseGateway):
         """输出错误信息日志"""
         error_id: int = error["ErrorID"]
         error_msg: str = error["ErrorMsg"]
-        msg: str = f"{msg}，代码：{error_id}，信息：{error_msg}"
+        msg = f"{msg}，代码：{error_id}，信息：{error_msg}"
         self.write_log(msg)
 
-    def process_timer_event(self, event) -> None:
+    def process_timer_event(self, event: Event) -> None:
         """定时事件处理"""
         self.count += 1
         if self.count < 2:
@@ -248,7 +251,7 @@ class TtsGateway(BaseGateway):
 
     def init_query(self) -> None:
         """初始化查询任务"""
-        self.count: int = 0
+        self.count = 0
         self.query_functions: list = [self.query_account, self.query_position]
         self.event_engine.register(EVENT_TIMER, self.process_timer_event)
 
@@ -320,7 +323,7 @@ class TtsMdApi(MdApi):
 
         timestamp: str = f"{self.current_date} {data['UpdateTime']}.{int(data['UpdateMillisec']/100)}"
         dt: datetime = datetime.strptime(timestamp, "%Y%m%d %H:%M:%S.%f")
-        dt: datetime = dt.replace(tzinfo=CHINA_TZ)
+        dt = dt.replace(tzinfo=CHINA_TZ)
 
         tick: TickData = TickData(
             symbol=symbol,
@@ -367,7 +370,7 @@ class TtsMdApi(MdApi):
 
         self.gateway.on_tick(tick)
 
-    def connect(self, address: str, userid: str, password: str, brokerid: int) -> None:
+    def connect(self, address: str, userid: str, password: str, brokerid: str) -> None:
         """连接服务器"""
         self.userid = userid
         self.password = password
@@ -672,7 +675,7 @@ class TtsTdApi(TdApi):
 
         timestamp: str = f"{data['InsertDate']} {data['InsertTime']}"
         dt: datetime = datetime.strptime(timestamp, "%Y%m%d %H:%M:%S")
-        dt: datetime = dt.replace(tzinfo=CHINA_TZ)
+        dt = dt.replace(tzinfo=CHINA_TZ)
 
         order: OrderData = OrderData(
             symbol=symbol,
@@ -705,7 +708,7 @@ class TtsTdApi(TdApi):
 
         timestamp: str = f"{data['TradeDate']} {data['TradeTime']}"
         dt: datetime = datetime.strptime(timestamp, "%Y%m%d %H:%M:%S")
-        dt: datetime = dt.replace(tzinfo=CHINA_TZ)
+        dt = dt.replace(tzinfo=CHINA_TZ)
 
         trade: TradeData = TradeData(
             symbol=symbol,
@@ -735,7 +738,7 @@ class TtsTdApi(TdApi):
         address: str,
         userid: str,
         password: str,
-        brokerid: int,
+        brokerid: str,
         auth_code: str,
         appid: str
     ) -> None:
@@ -841,7 +844,8 @@ class TtsTdApi(TdApi):
         order: OrderData = req.create_order_data(orderid, self.gateway_name)
         self.gateway.on_order(order)
 
-        return order.vt_orderid
+        vt_orderid: str = order.vt_orderid
+        return vt_orderid
 
     def cancel_order(self, req: CancelRequest) -> None:
         """委托撤单"""
