@@ -66,6 +66,61 @@ if host_machine.system() == 'windows'
                                        dirs: [lib_dir, api_dir],
                                        required: true)
 
+# 设置Mac特定编译选项
+elif host_machine.system() == 'darwin'
+  # Mac编译器设置
+  extra_cpp_args = [
+    '-std=c++11',
+    '-mmacosx-version-min=10.12',
+  ]
+
+  extra_link_args = [
+    '-mmacosx-version-min=10.12',
+  ]
+
+  install_rpath_value = '@loader_path'
+
+  # 设置库目录
+  lib_dir = meson.current_source_dir() / 'vnpy_tts/api/libs'
+  api_dir = meson.current_source_dir() / 'vnpy_tts/api'
+
+  # 设置include目录（优先使用Mac专用头文件目录）
+  include_dir_value = fs.is_dir('vnpy_tts/api/include/mac') ? 'vnpy_tts/api/include/mac' : 'vnpy_tts/api/include'
+  include_dirs = include_directories(
+    include_dir_value,
+    'vnpy_tts/api/vntts',
+    pybind11_include_dir,
+  )
+
+  # 优先使用framework结构（若存在），否则回退为dylib/lib方式
+  if fs.is_dir('vnpy_tts/api/thostmduserapi_se.framework')
+    thostmduserapi_lib = declare_dependency(
+      dependencies: [py_dep],
+      link_args: [
+        '-F', api_dir,
+        '-framework', 'thostmduserapi_se'
+      ]
+    )
+  else
+    thostmduserapi_lib = cpp.find_library('thostmduserapi_se',
+                                         dirs: [api_dir, lib_dir],
+                                         required: true)
+  endif
+
+  if fs.is_dir('vnpy_tts/api/thosttraderapi_se.framework')
+    thosttraderapi_lib = declare_dependency(
+      dependencies: [py_dep],
+      link_args: [
+        '-F', api_dir,
+        '-framework', 'thosttraderapi_se'
+      ]
+    )
+  else
+    thosttraderapi_lib = cpp.find_library('thosttraderapi_se',
+                                         dirs: [api_dir, lib_dir],
+                                         required: true)
+  endif
+
 # 设置Linux特定编译选项
 else  # Linux
   # Linux编译器设置
@@ -79,6 +134,8 @@ else  # Linux
   extra_link_args = [
     '-lstdc++',
   ]
+
+  install_rpath_value = '$ORIGIN'
   
   # 设置库目录
   lib_dir = meson.current_source_dir() / 'vnpy_tts/api'
@@ -104,15 +161,11 @@ md_module = py.extension_module(
   'vnttsmd',
   sources: ['vnpy_tts/api/vntts/vnttsmd/vnttsmd.cpp'],
   include_directories: include_dirs,
-  dependencies: [py_dep],
+  dependencies: [py_dep, thostmduserapi_lib],
   cpp_args: extra_cpp_args,
-  link_args: extra_link_args + [
-    '-L' + lib_dir,
-    '-lthostmduserapi_se',
-    '-Wl,-rpath,$ORIGIN'
-  ],
+  link_args: extra_link_args,
   install: true,
-  install_rpath: '$ORIGIN',
+  install_rpath: install_rpath_value,
   subdir: 'vnpy_tts/api'
 )
 
@@ -121,15 +174,11 @@ td_module = py.extension_module(
   'vnttstd',
   sources: ['vnpy_tts/api/vntts/vnttstd/vnttstd.cpp'],
   include_directories: include_dirs,
-  dependencies: [py_dep],
+  dependencies: [py_dep, thosttraderapi_lib],
   cpp_args: extra_cpp_args,
-  link_args: extra_link_args + [
-    '-L' + lib_dir,
-    '-lthosttraderapi_se',
-    '-Wl,-rpath,$ORIGIN'
-  ],
+  link_args: extra_link_args,
   install: true,
-  install_rpath: '$ORIGIN',
+  install_rpath: install_rpath_value,
   subdir: 'vnpy_tts/api'
 )
 
@@ -161,6 +210,36 @@ if host_machine.system() == 'windows'
     api_libs,
     install_dir: py.get_install_dir() / 'vnpy_tts/api'
   )
+elif host_machine.system() == 'darwin'
+  # 安装Mac Framework文件夹（如存在）
+  if fs.is_dir('vnpy_tts/api/thostmduserapi_se.framework')
+    install_subdir(
+      'vnpy_tts/api/thostmduserapi_se.framework',
+      install_dir: py.get_install_dir() / 'vnpy_tts/api'
+    )
+  endif
+
+  if fs.is_dir('vnpy_tts/api/thosttraderapi_se.framework')
+    install_subdir(
+      'vnpy_tts/api/thosttraderapi_se.framework',
+      install_dir: py.get_install_dir() / 'vnpy_tts/api'
+    )
+  endif
+
+  # 安装dylib（如存在）
+  api_dylibs = []
+  if fs.exists('vnpy_tts/api/libthostmduserapi_se.dylib')
+    api_dylibs += ['vnpy_tts/api/libthostmduserapi_se.dylib']
+  endif
+  if fs.exists('vnpy_tts/api/libthosttraderapi_se.dylib')
+    api_dylibs += ['vnpy_tts/api/libthosttraderapi_se.dylib']
+  endif
+  if api_dylibs.length() > 0
+    install_data(
+      api_dylibs,
+      install_dir: py.get_install_dir() / 'vnpy_tts/api'
+    )
+  endif
 else  # Linux
   api_libs = [
     'vnpy_tts/api/libthostmduserapi_se.so',

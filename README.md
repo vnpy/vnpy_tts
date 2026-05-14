@@ -6,7 +6,7 @@
 
 <p align="center">
     <img src ="https://img.shields.io/badge/version-6.7.11.0-blueviolet.svg"/>
-    <img src ="https://img.shields.io/badge/platform-windows|linux-yellow.svg"/>
+    <img src ="https://img.shields.io/badge/platform-windows|linux|macos-yellow.svg"/>
     <img src ="https://img.shields.io/badge/python-3.10|3.11|3.12|3.13-blue.svg"/>
     <img src ="https://img.shields.io/github/license/vnpy/vnpy.svg?color=orange"/>
 </p>
@@ -45,7 +45,7 @@ pip install vnpy_tts
 pip install .
 ```
 
-使用源代码安装时需要进行C++编译，因此在执行上述命令之前请确保已经安装了【Visual Studio（Windows）】或者【GCC（Linux）】编译器。
+使用源代码安装时需要进行C++编译，因此在执行上述命令之前请确保已经安装了【Visual Studio（Windows）】、【GCC（Linux）】、【XCode（Mac）】编译器。
 
 如果需要以**开发模式**安装到当前Python环境，可以使用下述命令：
 
@@ -53,6 +53,16 @@ pip install .
 pip install -e . --no-build-isolation --config-settings=build-dir=.\vnpy_tts\api
 ```
 
+
+## Mac系统支持
+
+Mac系统下需要本地编译安装（无法直接从PyPI下载预编译wheel）。同时请确保已准备好TTS柜台的Mac版API动态库（`*.framework`或`*.dylib`）并放置在`vnpy_tts/api/`目录下。
+
+安装命令如下：
+
+```
+pip3 install .
+```
 
 ## 使用
 
