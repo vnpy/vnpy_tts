@@ -32,13 +32,11 @@ from vnpy.event import Event
 from ..api import (
     MdApi,
     TdApi,
-    THOST_FTDC_OAS_Submitted,
-    THOST_FTDC_OAS_Accepted,
-    THOST_FTDC_OAS_Rejected,
     THOST_FTDC_OST_NoTradeQueueing,
     THOST_FTDC_OST_PartTradedQueueing,
     THOST_FTDC_OST_AllTraded,
     THOST_FTDC_OST_Canceled,
+    THOST_FTDC_OST_Unknown,
     THOST_FTDC_D_Buy,
     THOST_FTDC_D_Sell,
     THOST_FTDC_PD_Long,
@@ -68,13 +66,11 @@ from ..api import (
 
 # 委托状态映射
 STATUS_TTS2VT: dict[str, Status] = {
-    THOST_FTDC_OAS_Submitted: Status.SUBMITTING,
-    THOST_FTDC_OAS_Accepted: Status.SUBMITTING,
-    THOST_FTDC_OAS_Rejected: Status.REJECTED,
     THOST_FTDC_OST_NoTradeQueueing: Status.NOTTRADED,
     THOST_FTDC_OST_PartTradedQueueing: Status.PARTTRADED,
     THOST_FTDC_OST_AllTraded: Status.ALLTRADED,
-    THOST_FTDC_OST_Canceled: Status.CANCELLED
+    THOST_FTDC_OST_Canceled: Status.CANCELLED,
+    THOST_FTDC_OST_Unknown: Status.SUBMITTING
 }
 
 # 多空方向映射
@@ -87,11 +83,13 @@ DIRECTION_TTS2VT[THOST_FTDC_PD_Long] = Direction.LONG
 DIRECTION_TTS2VT[THOST_FTDC_PD_Short] = Direction.SHORT
 
 # 委托类型映射
-ORDERTYPE_VT2TTS: dict[OrderType, str] = {
-    OrderType.LIMIT: THOST_FTDC_OPT_LimitPrice,
-    OrderType.MARKET: THOST_FTDC_OPT_AnyPrice
+ORDERTYPE_VT2TTS: dict[OrderType, tuple] = {
+    OrderType.LIMIT: (THOST_FTDC_OPT_LimitPrice, THOST_FTDC_TC_GFD, THOST_FTDC_VC_AV),
+    OrderType.MARKET: (THOST_FTDC_OPT_AnyPrice, THOST_FTDC_TC_GFD, THOST_FTDC_VC_AV),
+    OrderType.FAK: (THOST_FTDC_OPT_LimitPrice, THOST_FTDC_TC_IOC, THOST_FTDC_VC_AV),
+    OrderType.FOK: (THOST_FTDC_OPT_LimitPrice, THOST_FTDC_TC_IOC, THOST_FTDC_VC_CV),
 }
-ORDERTYPE_TTS2VT: dict[str, OrderType] = {v: k for k, v in ORDERTYPE_VT2TTS.items()}
+ORDERTYPE_TTS2VT: dict[tuple, OrderType] = {v: k for k, v in ORDERTYPE_VT2TTS.items()}
 
 # 开平方向映射
 OFFSET_VT2TTS: dict[Offset, str] = {
@@ -160,7 +158,7 @@ class TtsGateway(BaseGateway):
         "授权编码": ""
     }
 
-    exchanges: list[str] = list(EXCHANGE_TTS2VT.values())
+    exchanges: list[Exchange] = list(EXCHANGE_TTS2VT.values())
 
     def __init__(self, event_engine: EventEngine, gateway_name: str) -> None:
         """构造函数"""
@@ -184,12 +182,14 @@ class TtsGateway(BaseGateway):
         if (
             (not td_address.startswith("tcp://"))
             and (not td_address.startswith("ssl://"))
+            and (not td_address.startswith("socks"))
         ):
             td_address = "tcp://" + td_address
 
         if (
             (not md_address.startswith("tcp://"))
             and (not md_address.startswith("ssl://"))
+            and (not md_address.startswith("socks"))
         ):
             md_address = "tcp://" + md_address
 
@@ -204,13 +204,7 @@ class TtsGateway(BaseGateway):
 
     def send_order(self, req: OrderRequest) -> str:
         """委托下单"""
-        # 期权询价
-        if req.type == OrderType.RFQ:
-            vt_orderid: str = self.td_api.send_rfq(req)
-        # 其他委托
-        else:
-            vt_orderid = self.td_api.send_order(req)
-        return vt_orderid
+        return self.td_api.send_order(req)
 
     def cancel_order(self, req: CancelRequest) -> None:
         """委托撤单"""
@@ -233,8 +227,9 @@ class TtsGateway(BaseGateway):
         """输出错误信息日志"""
         error_id: int = error["ErrorID"]
         error_msg: str = error["ErrorMsg"]
-        msg = f"{msg}，代码：{error_id}，信息：{error_msg}"
-        self.write_log(msg)
+
+        log_msg: str = f"{msg}，代码：{error_id}，信息：{error_msg}"
+        self.write_log(log_msg)
 
     def process_timer_event(self, event: Event) -> None:
         """定时事件处理"""
@@ -251,7 +246,6 @@ class TtsGateway(BaseGateway):
 
     def init_query(self) -> None:
         """初始化查询任务"""
-        self.count = 0
         self.query_functions: list = [self.query_account, self.query_position]
         self.event_engine.register(EVENT_TIMER, self.process_timer_event)
 
@@ -316,12 +310,19 @@ class TtsMdApi(MdApi):
         if not data["UpdateTime"]:
             return
 
+        # 过滤还没有收到合约数据前的行情推送
         symbol: str = data["InstrumentID"]
-        contract: ContractData = symbol_contract_map.get(symbol, None)
+        contract: ContractData | None = symbol_contract_map.get(symbol, None)
         if not contract:
             return
 
-        timestamp: str = f"{self.current_date} {data['UpdateTime']}.{int(data['UpdateMillisec']/100)}"
+        # 对大商所的交易日字段取本地日期
+        if not data["ActionDay"] or contract.exchange == Exchange.DCE:
+            date_str: str = self.current_date
+        else:
+            date_str = data["ActionDay"]
+
+        timestamp: str = f"{date_str} {data['UpdateTime']}.{data['UpdateMillisec']}"
         dt: datetime = datetime.strptime(timestamp, "%Y%m%d %H:%M:%S.%f")
         dt = dt.replace(tzinfo=CHINA_TZ)
 
@@ -370,7 +371,13 @@ class TtsMdApi(MdApi):
 
         self.gateway.on_tick(tick)
 
-    def connect(self, address: str, userid: str, password: str, brokerid: str) -> None:
+    def connect(
+        self,
+        address: str,
+        userid: str,
+        password: str,
+        brokerid: str
+    ) -> None:
         """连接服务器"""
         self.userid = userid
         self.password = password
@@ -399,12 +406,6 @@ class TtsMdApi(MdApi):
 
     def subscribe(self, req: SubscribeRequest) -> None:
         """订阅行情"""
-        symbol: str = req.symbol
-
-        # 过滤重复的订阅
-        if symbol in self.subscribed:
-            return
-
         if self.login_status:
             self.subscribeMarketData(req.symbol)
         self.subscribed.add(req.symbol)
@@ -436,6 +437,7 @@ class TtsTdApi(TdApi):
         self.login_status: bool = False
         self.auth_status: bool = False
         self.login_failed: bool = False
+        self.auth_failed: bool = False
         self.contract_inited: bool = False
 
         self.userid: str = ""
@@ -446,7 +448,6 @@ class TtsTdApi(TdApi):
 
         self.frontid: int = 0
         self.sessionid: int = 0
-
         self.order_data: list[dict] = []
         self.trade_data: list[dict] = []
         self.positions: dict[str, PositionData] = {}
@@ -473,6 +474,10 @@ class TtsTdApi(TdApi):
             self.gateway.write_log("交易服务器授权验证成功")
             self.login()
         else:
+            # 如果是授权码错误，则禁止再次发起认证
+            if error['ErrorID'] == 63:
+                self.auth_failed = True
+
             self.gateway.write_error("交易服务器授权验证失败", error)
 
     def onRspUserLogin(self, data: dict, error: dict, reqid: int, last: bool) -> None:
@@ -543,12 +548,12 @@ class TtsTdApi(TdApi):
 
         # 必须已经收到了合约信息后才能处理
         symbol: str = data["InstrumentID"]
-        contract: ContractData = symbol_contract_map.get(symbol, None)
+        contract: ContractData | None = symbol_contract_map.get(symbol, None)
 
         if contract:
             # 获取之前缓存的持仓数据缓存
             key: str = f"{data['InstrumentID'], data['PosiDirection']}"
-            position: PositionData = self.positions.get(key, None)
+            position: PositionData | None = self.positions.get(key, None)
             if not position:
                 position = PositionData(
                     symbol=data["InstrumentID"],
@@ -559,7 +564,7 @@ class TtsTdApi(TdApi):
                 self.positions[key] = position
 
             # 对于上期所昨仓需要特殊处理
-            if position.exchange in [Exchange.SHFE, Exchange.INE]:
+            if position.exchange in {Exchange.SHFE, Exchange.INE}:
                 if data["YdPosition"] and not data["TodayPosition"]:
                     position.yd_volume = data["Position"]
             # 对于其他交易所昨仓的计算
@@ -567,7 +572,7 @@ class TtsTdApi(TdApi):
                 position.yd_volume = data["Position"] - data["TodayPosition"]
 
             # 获取合约的乘数信息
-            size: int = contract.size
+            size: float = contract.size
 
             # 计算之前已有仓位的持仓总成本
             cost: float = position.price * position.volume * size
@@ -610,8 +615,8 @@ class TtsTdApi(TdApi):
 
     def onRspQryInstrument(self, data: dict, error: dict, reqid: int, last: bool) -> None:
         """合约查询回报"""
-        product: Product = PRODUCT_TTS2VT.get(data["ProductClass"], None)
-        exchange: Exchange = EXCHANGE_TTS2VT.get(data["ExchangeID"], None)
+        product: Product | None = PRODUCT_TTS2VT.get(data["ProductClass"], None)
+        exchange: Exchange | None = EXCHANGE_TTS2VT.get(data["ExchangeID"], None)
         if product and exchange:
             contract: ContractData = ContractData(
                 symbol=data["InstrumentID"],
@@ -620,6 +625,8 @@ class TtsTdApi(TdApi):
                 product=product,
                 size=data["VolumeMultiple"],
                 pricetick=data["PriceTick"],
+                min_volume=data["MinLimitOrderVolume"],
+                max_volume=data["MaxLimitOrderVolume"],
                 gateway_name=self.gateway_name
             )
 
@@ -635,6 +642,7 @@ class TtsTdApi(TdApi):
                 contract.option_type = OPTIONTYPE_TTS2VT.get(data["OptionsType"], None)
                 contract.option_strike = data["StrikePrice"]
                 contract.option_index = str(data["StrikePrice"])
+                contract.option_listed = datetime.strptime(data["OpenDate"], "%Y%m%d")
                 contract.option_expiry = datetime.strptime(data["ExpireDate"], "%Y%m%d")
 
             elif contract.product == Product.EQUITY or contract.product == Product.FUND:
@@ -673,27 +681,46 @@ class TtsTdApi(TdApi):
         order_ref: str = data["OrderRef"]
         orderid: str = f"{frontid}_{sessionid}_{order_ref}"
 
+        status: Status | None = STATUS_TTS2VT.get(data["OrderStatus"], None)
+        if not status:
+            self.gateway.write_log(f"收到不支持的委托状态，委托号：{orderid}")
+            return
+
         timestamp: str = f"{data['InsertDate']} {data['InsertTime']}"
         dt: datetime = datetime.strptime(timestamp, "%Y%m%d %H:%M:%S")
         dt = dt.replace(tzinfo=CHINA_TZ)
+
+        tp: tuple = (data["OrderPriceType"], data["TimeCondition"], data["VolumeCondition"])
+        order_type: OrderType | None = ORDERTYPE_TTS2VT.get(tp, None)
+        if not order_type:
+            self.gateway.write_log(f"收到不支持的委托类型，委托号：{orderid}")
+            return
 
         order: OrderData = OrderData(
             symbol=symbol,
             exchange=contract.exchange,
             orderid=orderid,
-            type=ORDERTYPE_TTS2VT[data["OrderPriceType"]],
+            type=order_type,
             direction=DIRECTION_TTS2VT[data["Direction"]],
             offset=OFFSET_TTS2VT[data["CombOffsetFlag"]],
             price=data["LimitPrice"],
             volume=data["VolumeTotalOriginal"],
             traded=data["VolumeTraded"],
-            status=STATUS_TTS2VT[data["OrderStatus"]],
+            status=status,
             datetime=dt,
             gateway_name=self.gateway_name
         )
         self.gateway.on_order(order)
 
         self.sysid_orderid_map[data["OrderSysID"]] = orderid
+
+        # 特殊情况撤单（非交易时段、资金不足等）的日志输出
+        if (
+            data["OrderStatus"] == THOST_FTDC_OST_Canceled
+            and data["StatusMsg"] != "已撤单"       # 正常撤单
+        ):
+            status_msg: str = data["StatusMsg"]
+            self.gateway.write_log(f"委托 {orderid} 状态更新，{status_msg}")
 
     def onRtnTrade(self, data: dict) -> None:
         """成交数据推送"""
@@ -723,15 +750,6 @@ class TtsTdApi(TdApi):
             gateway_name=self.gateway_name
         )
         self.gateway.on_trade(trade)
-
-    def onRspForQuoteInsert(self, data: dict, error: dict, reqid: int, last: bool) -> None:
-        """询价请求回报"""
-        if not error["ErrorID"]:
-            symbol: str = data["InstrumentID"]
-            msg: str = f"{symbol}询价请求发送成功"
-            self.gateway.write_log(msg)
-        else:
-            self.gateway.write_error("询价请求发送失败", error)
 
     def connect(
         self,
@@ -765,6 +783,9 @@ class TtsTdApi(TdApi):
 
     def authenticate(self) -> None:
         """发起授权验证"""
+        if self.auth_failed:
+            return
+
         tts_req: dict = {
             "UserID": self.userid,
             "BrokerID": self.brokerid,
@@ -783,8 +804,7 @@ class TtsTdApi(TdApi):
         tts_req: dict = {
             "UserID": self.userid,
             "Password": self.password,
-            "BrokerID": self.brokerid,
-            "AppID": self.appid
+            "BrokerID": self.brokerid
         }
 
         self.reqid += 1
@@ -807,12 +827,15 @@ class TtsTdApi(TdApi):
 
         self.order_ref += 1
 
+        tp: tuple = ORDERTYPE_VT2TTS[req.type]
+        price_type, time_condition, volume_condition = tp
+
         tts_req: dict = {
             "InstrumentID": req.symbol,
             "ExchangeID": exchange,
             "LimitPrice": req.price,
             "VolumeTotalOriginal": int(req.volume),
-            "OrderPriceType": ORDERTYPE_VT2TTS.get(req.type, ""),
+            "OrderPriceType": price_type,
             "Direction": DIRECTION_VT2TTS.get(req.direction, ""),
             "CombOffsetFlag": OFFSET_VT2TTS.get(req.offset, ""),
             "OrderRef": str(self.order_ref),
@@ -823,29 +846,22 @@ class TtsTdApi(TdApi):
             "ContingentCondition": THOST_FTDC_CC_Immediately,
             "ForceCloseReason": THOST_FTDC_FCC_NotForceClose,
             "IsAutoSuspend": 0,
-            "TimeCondition": THOST_FTDC_TC_GFD,
-            "VolumeCondition": THOST_FTDC_VC_AV,
+            "TimeCondition": time_condition,
+            "VolumeCondition": volume_condition,
             "MinVolume": 1
         }
 
-        if req.type == OrderType.FAK:
-            tts_req["OrderPriceType"] = THOST_FTDC_OPT_LimitPrice
-            tts_req["TimeCondition"] = THOST_FTDC_TC_IOC
-            tts_req["VolumeCondition"] = THOST_FTDC_VC_AV
-        elif req.type == OrderType.FOK:
-            tts_req["OrderPriceType"] = THOST_FTDC_OPT_LimitPrice
-            tts_req["TimeCondition"] = THOST_FTDC_TC_IOC
-            tts_req["VolumeCondition"] = THOST_FTDC_VC_CV
-
         self.reqid += 1
-        self.reqOrderInsert(tts_req, self.reqid)
+        n: int = self.reqOrderInsert(tts_req, self.reqid)
+        if n:
+            self.gateway.write_log(f"委托请求发送失败，错误代码：{n}")
+            return ""
 
         orderid: str = f"{self.frontid}_{self.sessionid}_{self.order_ref}"
         order: OrderData = req.create_order_data(orderid, self.gateway_name)
         self.gateway.on_order(order)
 
-        vt_orderid: str = order.vt_orderid
-        return vt_orderid
+        return order.vt_orderid
 
     def cancel_order(self, req: CancelRequest) -> None:
         """委托撤单"""
@@ -869,31 +885,6 @@ class TtsTdApi(TdApi):
 
         self.reqid += 1
         self.reqOrderAction(tts_req, self.reqid)
-
-    def send_rfq(self, req: OrderRequest) -> str:
-        """询价请求"""
-        exchange: Exchange = EXCHANGE_VT2TTS.get(req.exchange, None)
-        if not exchange:
-            self.gateway.write_log(f"不支持的交易所：{req.exchange}")
-            return ""
-
-        self.order_ref += 1
-
-        tts_req: dict = {
-            "InstrumentID": req.symbol,
-            "ExchangeID": exchange,
-            "ForQuoteRef": str(self.order_ref),
-            "BrokerID": self.brokerid,
-            "InvestorID": self.userid
-        }
-
-        self.reqid += 1
-        self.reqForQuoteInsert(tts_req, self.reqid)
-
-        orderid: str = f"{self.frontid}_{self.sessionid}_{self.order_ref}"
-        vt_orderid: str = f"{self.gateway_name}.{orderid}"
-
-        return vt_orderid
 
     def query_account(self) -> None:
         """查询资金"""
