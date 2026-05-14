@@ -148,7 +148,7 @@ class TtsGateway(BaseGateway):
 
     default_name: str = "TTS"
 
-    default_setting: dict[str, str] = {
+    default_setting: dict[str, str | int | float | bool] = {
         "用户名": "",
         "密码": "",
         "经纪商代码": "",
@@ -820,8 +820,8 @@ class TtsTdApi(TdApi):
             self.gateway.write_log(f"当前接口不支持该类型的委托{req.type.value}")
             return ""
 
-        exchange: Exchange = EXCHANGE_VT2TTS.get(req.exchange, None)
-        if not exchange:
+        exchange: str | None = EXCHANGE_VT2TTS.get(req.exchange)
+        if exchange is None:
             self.gateway.write_log(f"不支持的交易所：{req.exchange}")
             return ""
 
@@ -865,8 +865,8 @@ class TtsTdApi(TdApi):
 
     def cancel_order(self, req: CancelRequest) -> None:
         """委托撤单"""
-        exchange: Exchange = EXCHANGE_VT2TTS.get(req.exchange, None)
-        if not exchange:
+        exchange: str | None = EXCHANGE_VT2TTS.get(req.exchange)
+        if exchange is None:
             self.gateway.write_log(f"不支持的交易所：{req.exchange}")
             return
 
