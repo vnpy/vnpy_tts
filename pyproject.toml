@@ -46,11 +46,13 @@ args = ['--vsenv']
 include = [
     "**/*.dll",
     "**/*.so",
+    "**/*.dylib",
     "**/*.pyd",
     "**/*.h",
     "**/*.cpp",
     "**/*.lib",
     "**/*.a",
+    "**/*.framework/**",
 ]
 
 preserve-path = true 
