@@ -1,3 +1,5 @@
+"""启动 VeighNa Trader 并加载 TTS 仿真接口。"""
+
 from vnpy.event import EventEngine
 from vnpy.trader.engine import MainEngine
 from vnpy.trader.ui import MainWindow, create_qapp

@@ -1,3 +1,5 @@
+"""实现 TTS 仿真交易接口。"""
+
 import sys
 from datetime import datetime
 from time import sleep
@@ -251,7 +253,7 @@ class TtsGateway(BaseGateway):
 
 
 class TtsMdApi(MdApi):
-    """"""
+    """对接 TTS 仿真柜台的行情接口。"""
 
     def __init__(self, gateway: TtsGateway) -> None:
         """构造函数"""
@@ -421,7 +423,7 @@ class TtsMdApi(MdApi):
 
 
 class TtsTdApi(TdApi):
-    """"""
+    """对接 TTS 仿真柜台的交易接口。"""
 
     def __init__(self, gateway: TtsGateway) -> None:
         """构造函数"""
