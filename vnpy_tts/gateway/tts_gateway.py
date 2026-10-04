@@ -1,5 +1,6 @@
 """实现 TTS 仿真交易接口。"""
 
+from collections.abc import Callable
 import sys
 from datetime import datetime
 from time import sleep
@@ -136,8 +137,8 @@ OPTIONTYPE_TTS2VT: dict[str, OptionType] = {
 }
 
 # 其他常量
-MAX_FLOAT = sys.float_info.max                  # 浮点数极限值
-CHINA_TZ = ZoneInfo("Asia/Shanghai")       # 中国时区
+MAX_FLOAT: float = sys.float_info.max                  # 浮点数极限值
+CHINA_TZ: ZoneInfo = ZoneInfo("Asia/Shanghai")       # 中国时区
 
 # 合约数据全局缓存字典
 symbol_contract_map: dict[str, ContractData] = {}
@@ -240,7 +241,7 @@ class TtsGateway(BaseGateway):
             return
         self.count = 0
 
-        func = self.query_functions.pop(0)
+        func: Callable[[], None] = self.query_functions.pop(0)
         func()
         self.query_functions.append(func)
 
@@ -290,6 +291,7 @@ class TtsMdApi(MdApi):
             self.login_status = True
             self.gateway.write_log("行情服务器登录成功")
 
+            symbol: str
             for symbol in self.subscribed:
                 self.subscribeMarketData(symbol)
         else:
@@ -830,6 +832,9 @@ class TtsTdApi(TdApi):
         self.order_ref += 1
 
         tp: tuple = ORDERTYPE_VT2TTS[req.type]
+        price_type: str
+        time_condition: str
+        volume_condition: str
         price_type, time_condition, volume_condition = tp
 
         tts_req: dict = {
@@ -872,6 +877,9 @@ class TtsTdApi(TdApi):
             self.gateway.write_log(f"不支持的交易所：{req.exchange}")
             return
 
+        frontid: str
+        sessionid: str
+        order_ref: str
         frontid, sessionid, order_ref = req.orderid.split("_")
 
         tts_req: dict = {
